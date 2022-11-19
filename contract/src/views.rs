@@ -43,9 +43,9 @@ impl Contract {
     }
 
     /// Returns available amount of NEAR that can be spent (outside of amount for storage and bonds).
-    pub fn get_available_amount(&self) -> U128 {
-        U128(env::account_balance() - self.get_locked_storage_amount().0 - self.locked_amount)
-    }
+    // pub fn get_available_amount(&self) -> U128 {
+    //     U128(env::account_balance() - self.get_locked_storage_amount().0 - self.locked_amount)
+    // }
 
     /// Last proposal's id.
     pub fn get_last_proposal_id(&self) -> u64 {

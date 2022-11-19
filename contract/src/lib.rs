@@ -6,12 +6,17 @@ use near_sdk::{
     env, ext_contract, near_bindgen, AccountId, Balance, BorshStorageKey, CryptoHash,
     PanicOnDefault, Promise, PromiseResult,
 };
+
+pub use crate::policy::{
+    default_policy, Policy, RoleKind, RolePermission, VersionedPolicy, VotePolicy,
+};
 use crate::proposals::VersionedProposal;
 pub use crate::proposals::{Proposal, ProposalInput, ProposalKind, ProposalStatus};
 pub use crate::types::{Action, Config, OldAccountId, OLD_BASE_TOKEN};
 use crate::upgrade::{internal_get_factory_info, internal_set_factory_info, FactoryInfo};
-pub use crate::views::{BountyOutput, ProposalOutput};
+pub use crate::views::{ProposalOutput};
 
+mod policy;
 mod proposals;
 mod types;
 mod upgrade;
@@ -21,34 +26,41 @@ pub mod views;
 pub enum StorageKeys {
     Config,
     Policy,
+    Delegations,
     Proposals,
+    Bounties,
+    BountyClaimers,
+    BountyClaimCounts,
+    Blobs,
 }
 
-// Define the contract structure
+/// After payouts, allows a callback
+#[ext_contract(ext_self)]
+pub trait ExtSelf {
+    /// Callback after proposal execution.
+    fn on_proposal_callback(&mut self, proposal_id: u64) -> PromiseOrValue<()>;
+}
+
 #[near_bindgen]
 #[derive(BorshSerialize, BorshDeserialize, PanicOnDefault)]
 pub struct Contract {
     /// DAO configuration.
     pub config: LazyOption<Config>,
+    /// Voting and permissions policy.
+    pub policy: LazyOption<VersionedPolicy>,
+    /// Last available id for the proposals.
+    pub last_proposal_id: u64,
+    /// Proposal map from ID to proposal information.
     pub proposals: LookupMap<u64, VersionedProposal>,
-
 }
 
-// Define the default, which automatically initializes the contract
-impl Default for Contract{
-    fn default() -> Self{
-        Self{message: DEFAULT_MESSAGE.to_string()}
-    }
-}
-
-// Implement the contract structure
 #[near_bindgen]
 impl Contract {
-     #[init]
+    #[init]
     pub fn new(config: Config, policy: VersionedPolicy) -> Self {
         let this = Self {
             config: LazyOption::new(StorageKeys::Config, Some(&config)),
-            // policy: LazyOption::new(StorageKeys::Policy, Some(&policy.upgrade())),
+            policy: LazyOption::new(StorageKeys::Policy, Some(&policy.upgrade())),
             last_proposal_id: 0,
             proposals: LookupMap::new(StorageKeys::Proposals),
         };
@@ -59,12 +71,12 @@ impl Contract {
         this
     }
 
+    /// Returns factory information, including if auto update is allowed.
+    pub fn get_factory_info(&self) -> FactoryInfo {
+        internal_get_factory_info()
+    }
 }
 
-/*
- * The rest of this file holds the inline tests for the code above
- * Learn more about Rust tests: https://doc.rust-lang.org/book/ch11-01-writing-tests.html
- */
 #[cfg(test)]
 mod tests {
     use near_sdk::test_utils::{accounts, VMContextBuilder};
@@ -75,13 +87,26 @@ mod tests {
 
     use super::*;
 
+    fn create_proposal(context: &mut VMContextBuilder, contract: &mut Contract) -> u64 {
+        testing_env!(context.attached_deposit(to_yocto("1")).build());
+        contract.add_proposal(ProposalInput {
+            description: "test".to_string(),
+            kind: ProposalKind::Transfer {
+                token_id: String::from(OLD_BASE_TOKEN),
+                receiver_id: accounts(2).into(),
+                amount: U128(to_yocto("100")),
+                msg: None,
+            },
+        })
+    }
+
     #[test]
     fn test_basics() {
         let mut context = VMContextBuilder::new();
         testing_env!(context.predecessor_account_id(accounts(1)).build());
         let mut contract = Contract::new(
             Config::test_config(),
-            VersionedPolicy::Default(vec![accounts(1).into()]),
+            VersionedPolicy::Default(vec![accounts(1).into(), accounts(2).into()]),
         );
         let id = create_proposal(&mut context, &mut contract);
         assert_eq!(contract.get_proposal(id).proposal.description, "test");
@@ -106,16 +131,32 @@ mod tests {
         );
 
         // non council adding proposal per default policy.
-        testing_env!(context
-            .predecessor_account_id(accounts(2))
-            .attached_deposit(to_yocto("1"))
-            .build());
-        let _id = contract.add_proposal(ProposalInput {
-            description: "test".to_string(),
-            kind: ProposalKind::AddMemberToRole {
-                member_id: accounts(2).into(),
-                role: "council".to_string(),
-            },
-        });
+        // testing_env!(context
+        //     .predecessor_account_id(accounts(2))
+        //     .attached_deposit(to_yocto("1"))
+        //     .build());
+        // let _id = contract.add_proposal(ProposalInput {
+        //     description: "test".to_string(),
+        //     kind: ProposalKind::Transfer {
+        //         token_id: String::from(OLD_BASE_TOKEN),
+        //         receiver_id: accounts(2).into(),
+        //         amount: U128(to_yocto("100")),
+        //         msg: Some(String::from("Look Mah! I passed a Proposal!")),
+        //     },
+        // });
     }
+
+    // #[test]
+    // #[should_panic(expected = "ERR_ALREADY_VOTED")]
+    // fn test_vote_twice() {
+    //     let mut context = VMContextBuilder::new();
+    //     testing_env!(context.predecessor_account_id(accounts(1)).build());
+    //     let mut contract = Contract::new(
+    //         Config::test_config(),
+    //         VersionedPolicy::Default(vec![accounts(1).into(), accounts(2).into()]),
+    //     );
+    //     let id = create_proposal(&mut context, &mut contract);
+    //     contract.act_proposal(id, Action::VoteApprove, None);
+    //     contract.act_proposal(id, Action::VoteApprove, None);
+    // }
 }

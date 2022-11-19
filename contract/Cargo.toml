@@ -1,5 +1,5 @@
 [package]
-name = "hello_near"
+name = "meta-dao"
 version = "1.0.0"
 authors = ["Near Inc <hello@near.org>"]
 edition = "2021"
@@ -8,8 +8,13 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-near-sdk = "4.0.0"
+near-sdk = "4.0.0-pre.4"
 uint = { version = "0.9.3", default-features = false }
+near-contract-standards = "4.0.0-pre.4"
+hex = "0.4.2"
+
+[dev-dependencies]
+near-sdk-sim = "4.0.0-pre.4"
 
 [profile.release]
 codegen-units = 1
