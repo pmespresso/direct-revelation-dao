@@ -273,8 +273,8 @@ impl Contract {
         proposal_id: u64,
     ) -> PromiseOrValue<()> {
 
-        let mut payout = ONE_YOCTO_NEAR;
-        let mut payout_token = None;
+        let payout = ONE_YOCTO_NEAR;
+        let payout_token = String::from(OLD_BASE_TOKEN);
 
         // 1. Decide on N (threshold)
         // This should be done in a more encrypted way, but for now we just hardcode buckets
@@ -282,7 +282,7 @@ impl Contract {
 
         // 2. Bucket rewards groups
         proposal.votes.iter()
-            .map(|(account_id, vote_with_timestamp)| 
+            .for_each(|(account_id, vote_with_timestamp)| 
                 if vote_with_timestamp.blocknumber > proposal.submission_time.0 + n {
                     proposal.reward_group_1.push(account_id.clone());
                 } else if vote_with_timestamp.blocknumber > proposal.submission_time.0 + 2 * n {
@@ -295,7 +295,7 @@ impl Contract {
         // 3. Make payouts with memo
         proposal.reward_group_1.iter().for_each(|account_id| {
             self.internal_payout(
-                &payout_token,
+                &convert_old_to_new_token(&payout_token),
                 account_id,
                 payout * 4,
                 format!("Proposal #{} reward", proposal_id),
@@ -305,7 +305,7 @@ impl Contract {
 
         proposal.reward_group_2.iter().for_each(|account_id| {
             self.internal_payout(
-                &payout_token,
+                &convert_old_to_new_token(&payout_token),
                 account_id,
                 payout * 3,
                 format!("Proposal #{} reward", proposal_id),
@@ -315,7 +315,7 @@ impl Contract {
 
         proposal.reward_group_3.iter().for_each(|account_id| {
             self.internal_payout(
-                &payout_token,
+                &convert_old_to_new_token(&payout_token),
                 account_id,
                 payout * 2,
                 format!("Proposal #{} reward", proposal_id),
