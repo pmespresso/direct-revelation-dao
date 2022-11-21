@@ -1,26 +1,12 @@
-near-blank-project
+meta-dao
 ==================
-
-This app was initialized with [create-near-app]
+Meta DAO is a fork of Sputnik DAO with bounties and delegation logic removed. The point was to add the Price Ascension mechanism described in https://a16zcrypto.com/paying-people-to-participate-in-governance/ to an existing DAO.
 
 
 Quick Start
 ===========
 
-If you haven't installed dependencies during setup:
-
-    npm install
-
-
-Build and deploy your contract to TestNet with a temporary dev account:
-
-    npm run deploy
-
-Test your contract:
-
-    npm test
-
-If you have a frontend, run `npm start`. This will run a dev server.
+`cd contracts && cargo test`
 
 
 Exploring The Code
