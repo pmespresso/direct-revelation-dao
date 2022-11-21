@@ -1,5 +1,6 @@
 use std::cmp::min;
 use std::collections::{HashMap, HashSet};
+use std::iter::Map;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::{U128, U64};
@@ -129,6 +130,7 @@ pub struct VotePolicy {
     pub quorum: U128,
     /// How many votes to pass this vote.
     pub threshold: WeightOrRatio,
+
 }
 
 impl Default for VotePolicy {
@@ -154,10 +156,8 @@ pub struct Policy {
     pub proposal_bond: U128,
     /// Expiration period for proposals.
     pub proposal_period: U64,
-    /// Bond for claiming a bounty.
-    pub bounty_bond: U128,
-    /// Period in which giving up on bounty is not punished.pol
-    pub bounty_forgiveness_period: U64,
+    /// Everyone who votes uptill this threshold will get a reward.
+    pub proposal_threshold_votes: U128,
 }
 
 /// Versioned policy.
@@ -204,8 +204,7 @@ pub fn default_policy(council: Vec<AccountId>) -> Policy {
         default_vote_policy: VotePolicy::default(),
         proposal_bond: U128(10u128.pow(24)),
         proposal_period: U64::from(1_000_000_000 * 60 * 60 * 24 * 7),
-        bounty_bond: U128(10u128.pow(24)),
-        bounty_forgiveness_period: U64::from(1_000_000_000 * 60 * 60 * 24),
+        proposal_threshold_votes: U128(1),
     }
 }
 
@@ -348,6 +347,10 @@ impl Policy {
             })
             .collect();
         (allowed_roles, allowed)
+    }
+
+    pub fn is_eligible_for_reward() -> bool {
+        true
     }
 
     /// Returns if given proposal kind is token weighted.

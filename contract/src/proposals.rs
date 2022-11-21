@@ -114,6 +114,14 @@ pub enum Vote {
     Remove = 0x2,
 }
 
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug))]
+#[serde(crate = "near_sdk::serde")]
+pub struct VoteWithTimestamp {
+    pub vote: Vote,
+    pub blocknumber: BlockHeight,
+}
+
 impl From<Action> for Vote {
     fn from(action: Action) -> Self {
         match action {
@@ -141,11 +149,15 @@ pub struct Proposal {
     /// Count of votes per role per decision: yes / no / spam.
     pub vote_counts: HashMap<String, [Balance; 3]>,
     /// Map of who voted and how.
-    pub votes: HashMap<AccountId, Vote>,
+    pub votes: HashMap<AccountId, VoteWithTimestamp>,
     /// The cutoff for when a submitted vote will be rewarded
-    pub thresholdBlock: Option<BlockHeight>,
+    pub threshold_block: Option<BlockHeight>,
     /// Submission time (for voting period).
     pub submission_time: U64,
+    /// FIXME: wanted to use mapping but Borsch cannot serialize so gotta implement manually.
+    pub reward_group_1: Vec<AccountId>,
+    pub reward_group_2: Vec<AccountId>,
+    pub reward_group_3: Vec<AccountId>,
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
@@ -183,7 +195,7 @@ impl Proposal {
                 amount;
         }
         assert!(
-            self.votes.insert(account_id.clone(), vote).is_none(),
+            self.votes.insert(account_id.clone(), VoteWithTimestamp { vote: vote, blocknumber: env::block_height() }).is_none(),
             "ERR_ALREADY_VOTED"
         );
     }
@@ -207,8 +219,11 @@ impl From<ProposalInput> for Proposal {
             status: ProposalStatus::InProgress,
             vote_counts: HashMap::default(),
             votes: HashMap::default(),
-            thresholdBlock: None,
+            threshold_block: None,
             submission_time: U64::from(env::block_timestamp()),
+            reward_group_1: vec![],
+            reward_group_2: vec![],
+            reward_group_3: vec![],
         }
     }
 }
@@ -257,6 +272,57 @@ impl Contract {
         proposal: &Proposal,
         proposal_id: u64,
     ) -> PromiseOrValue<()> {
+
+        let mut payout = ONE_YOCTO_NEAR;
+        let mut payout_token = None;
+
+        // 1. Decide on N (threshold)
+        // This should be done in a more encrypted way, but for now we just hardcode buckets
+        let n:u64 = policy.proposal_period.into() / 4;
+
+        // 2. Bucket rewards groups
+        proposal.votes.iter()
+            .map(|(account_id, vote_with_timestamp)| 
+                if vote_with_timestamp.blocknumber > proposal.submission_time.into() + n {
+                    proposal.reward_group_1.push(account_id.clone());
+                } else if vote_with_timestamp.blocknumber > proposal.submission_time.into() + 2 * n {
+                    proposal.reward_group_2.push(account_id.clone());
+                } else {
+                    proposal.reward_group_3.push(account_id.clone());
+                }
+            );
+            
+        // 3. Make payouts with memo
+        proposal.reward_group_1.iter().for_each(|account_id| {
+            self.internal_payout(
+                &payout_token,
+                account_id,
+                payout * 4,
+                format!("Proposal #{} reward", proposal_id),
+                None,
+            );
+        });
+
+        proposal.reward_group_2.iter().for_each(|account_id| {
+            self.internal_payout(
+                &payout_token,
+                account_id,
+                payout * 3,
+                format!("Proposal #{} reward", proposal_id),
+                None,
+            );
+        });
+
+        proposal.reward_group_3.iter().for_each(|account_id| {
+            self.internal_payout(
+                &payout_token,
+                account_id,
+                payout * 2,
+                format!("Proposal #{} reward", proposal_id),
+                None,
+            );
+        });
+    
         let result = match &proposal.kind {
             ProposalKind::ChangeConfig { config } => {
                 self.config.set(config);

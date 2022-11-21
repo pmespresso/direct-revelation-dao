@@ -129,34 +129,5 @@ mod tests {
             contract.get_proposal(id).proposal.status,
             ProposalStatus::Expired
         );
-
-        // non council adding proposal per default policy.
-        // testing_env!(context
-        //     .predecessor_account_id(accounts(2))
-        //     .attached_deposit(to_yocto("1"))
-        //     .build());
-        // let _id = contract.add_proposal(ProposalInput {
-        //     description: "test".to_string(),
-        //     kind: ProposalKind::Transfer {
-        //         token_id: String::from(OLD_BASE_TOKEN),
-        //         receiver_id: accounts(2).into(),
-        //         amount: U128(to_yocto("100")),
-        //         msg: Some(String::from("Look Mah! I passed a Proposal!")),
-        //     },
-        // });
     }
-
-    // #[test]
-    // #[should_panic(expected = "ERR_ALREADY_VOTED")]
-    // fn test_vote_twice() {
-    //     let mut context = VMContextBuilder::new();
-    //     testing_env!(context.predecessor_account_id(accounts(1)).build());
-    //     let mut contract = Contract::new(
-    //         Config::test_config(),
-    //         VersionedPolicy::Default(vec![accounts(1).into(), accounts(2).into()]),
-    //     );
-    //     let id = create_proposal(&mut context, &mut contract);
-    //     contract.act_proposal(id, Action::VoteApprove, None);
-    //     contract.act_proposal(id, Action::VoteApprove, None);
-    // }
 }
