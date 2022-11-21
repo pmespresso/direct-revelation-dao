@@ -1,86 +1,43 @@
-meta-dao
-==================
+# meta-dao
+
 Meta DAO is a fork of Sputnik DAO with bounties and delegation logic removed. The point was to add the Price Ascension mechanism described in https://a16zcrypto.com/paying-people-to-participate-in-governance/ to an existing DAO.
 
+The contract has been deployed on Testnet to: https://explorer.testnet.near.org/transactions/CiPyFYost4apKbfd2L7BCgh1bi9DY7oD5C1anvd2Y19P
 
-Quick Start
-===========
+# Quick Start
 
 `cd contracts && cargo test`
 
+# Summary
 
-Exploring The Code
-==================
+![alt text](https://github.com/pmespresso/direct-revelation-dao/diagram.jpeg?raw=true)
 
-1. The smart-contract code lives in the `/contract` folder. See the README there for
-   more info. In blockchain apps the smart contract is the "backend" of your app.
-2. The frontend code lives in the `/frontend` folder. `/frontend/index.html` is a great
-   place to start exploring. Note that it loads in `/frontend/index.js`,
-   this is your entrypoint to learn how the frontend connects to the NEAR blockchain.
-3. Test your contract: `npm test`, this will run the tests in `integration-tests` directory.
+## Inspiration
 
+https://a16zcrypto.com/paying-people-to-participate-in-governance/
 
-Deploy
-======
+## What it does
 
-Every smart contract in NEAR has its [own associated account][NEAR accounts]. 
-When you run `npm run deploy`, your smart contract gets deployed to the live NEAR TestNet with a temporary dev account.
-When you're ready to make it permanent, here's how:
+Every time there is a proposal up for vote, we take the `proposal_period` and chunk it up into `N` discrete buckets. At the end of each bucket, the offered reward for voting steps up to the next bracket. At the end of the voting period, some random `threshold_block` is chosen at which point all further votes will be counted toward the final vote, but not rewarded directly. Hence it is in the voters' interest to: a) carefully analyze their real cost of voting and b) submit a vote as close to when the the proposed reward by the DAO surpasses it.
 
+There is seemingly the incentive to delay indefinitely in order to maximize rewards, but the caveat is that they run the risk of delaying past the threshold block (which is determined retroactively) and hence being frozen out of rewards entirely.
 
-Step 0: Install near-cli (optional)
--------------------------------------
+## Challenges we ran into
 
-[near-cli] is a command line interface (CLI) for interacting with the NEAR blockchain. It was installed to the local `node_modules` folder when you ran `npm install`, but for best ergonomics you may want to install it globally:
+- provably fair method of picking `N`
 
-    npm install --global near-cli
+## Accomplishments that we're proud of
 
-Or, if you'd rather use the locally-installed version, you can prefix all `near` commands with `npx`
+- Groking and implementing the research article in just a few days while also learning how NEAR works from scratch
+- Actually writing some Rust code that works (after being scared away by Substrate years ago)
 
-Ensure that it's installed with `near --version` (or `npx near --version`)
+## What we learned
 
+- All the `near_sdk` types and blockchian specific primitives to use out of the box
+- All the testing tools provided by `near_sdk`
+- How a NEAR DAO is structured (with the Sputnik example)
 
-Step 1: Create an account for the contract
-------------------------------------------
+## What's next for Meta DAO
 
-Each account on NEAR can have at most one contract deployed to it. If you've already created an account such as `your-name.testnet`, you can deploy your contract to `near-blank-project.your-name.testnet`. Assuming you've already created an account on [NEAR Wallet], here's how to create `near-blank-project.your-name.testnet`:
-
-1. Authorize NEAR CLI, following the commands it gives you:
-
-      near login
-
-2. Create a subaccount (replace `YOUR-NAME` below with your actual account name):
-
-      near create-account near-blank-project.YOUR-NAME.testnet --masterAccount YOUR-NAME.testnet
-
-Step 2: deploy the contract
----------------------------
-
-Use the CLI to deploy the contract to TestNet with your account ID.
-Replace `PATH_TO_WASM_FILE` with the `wasm` that was generated in `contract` build directory.
-
-    near deploy --accountId near-blank-project.YOUR-NAME.testnet --wasmFile PATH_TO_WASM_FILE
-
-
-Step 3: set contract name in your frontend code
------------------------------------------------
-
-Modify the line in `src/config.js` that sets the account name of the contract. Set it to the account id you used above.
-
-    const CONTRACT_NAME = process.env.CONTRACT_NAME || 'near-blank-project.YOUR-NAME.testnet'
-
-
-
-Troubleshooting
-===============
-
-On Windows, if you're seeing an error containing `EPERM` it may be related to spaces in your path. Please see [this issue](https://github.com/zkat/npx/issues/209) for more details.
-
-
-  [create-near-app]: https://github.com/near/create-near-app
-  [Node.js]: https://nodejs.org/en/download/package-manager/
-  [jest]: https://jestjs.io/
-  [NEAR accounts]: https://docs.near.org/concepts/basics/account
-  [NEAR Wallet]: https://wallet.testnet.near.org/
-  [near-cli]: https://github.com/near/near-cli
-  [gh-pages]: https://github.com/tschaub/gh-pages
+- pick `N` retroactively in a provably fair / random way (maybe like [Polkadot's Candle Auctions] (https://polkadot.network/blog/research-update-the-case-for-candle-auctions/))
+- build a UI and a community around it to play with it
