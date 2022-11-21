@@ -1,6 +1,5 @@
 use std::cmp::min;
 use std::collections::{HashMap, HashSet};
-use std::iter::Map;
 
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::{U128, U64};

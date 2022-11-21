@@ -104,6 +104,10 @@ mod tests {
     fn test_basics() {
         let mut context = VMContextBuilder::new();
         testing_env!(context.predecessor_account_id(accounts(1)).build());
+
+        let mut balance_account_1 = env::account_balance();
+        println!("balance_account_1: {:?}", balance_account_1);
+
         let mut contract = Contract::new(
             Config::test_config(),
             VersionedPolicy::Default(vec![accounts(1).into(), accounts(2).into()]),
@@ -129,5 +133,9 @@ mod tests {
             contract.get_proposal(id).proposal.status,
             ProposalStatus::Expired
         );
+
+        // expect payout
+        balance_account_1 = env::account_balance();
+        println!("balance_account_1 after: {:?}", balance_account_1);
     }
 }
