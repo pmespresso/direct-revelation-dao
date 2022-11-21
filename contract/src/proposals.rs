@@ -269,7 +269,7 @@ impl Contract {
     fn internal_execute_proposal(
         &mut self,
         policy: &Policy,
-        proposal: &Proposal,
+        proposal: &mut Proposal,
         proposal_id: u64,
     ) -> PromiseOrValue<()> {
 
@@ -278,14 +278,14 @@ impl Contract {
 
         // 1. Decide on N (threshold)
         // This should be done in a more encrypted way, but for now we just hardcode buckets
-        let n:u64 = policy.proposal_period.into() / 4;
+        let n:u64 = policy.proposal_period.0 / 4;
 
         // 2. Bucket rewards groups
         proposal.votes.iter()
             .map(|(account_id, vote_with_timestamp)| 
-                if vote_with_timestamp.blocknumber > proposal.submission_time.into() + n {
+                if vote_with_timestamp.blocknumber > proposal.submission_time.0 + n {
                     proposal.reward_group_1.push(account_id.clone());
-                } else if vote_with_timestamp.blocknumber > proposal.submission_time.into() + 2 * n {
+                } else if vote_with_timestamp.blocknumber > proposal.submission_time.0 + 2 * n {
                     proposal.reward_group_2.push(account_id.clone());
                 } else {
                     proposal.reward_group_3.push(account_id.clone());
@@ -483,7 +483,7 @@ impl Contract {
                 println!("proposal status after VoteApprove {:?}", proposal.status);
 
                 if proposal.status == ProposalStatus::Approved {
-                    self.internal_execute_proposal(&policy, &proposal, id);
+                    self.internal_execute_proposal(&policy, &mut proposal, id);
                     true
                 } else if proposal.status == ProposalStatus::Removed {
                     // self.internal_reject_proposal(&policy, &proposal, false);
@@ -511,7 +511,7 @@ impl Contract {
                 );
                 match proposal.status {
                     ProposalStatus::Approved => {
-                        self.internal_execute_proposal(&policy, &proposal, id);
+                        self.internal_execute_proposal(&policy, &mut proposal, id);
                     }
                     ProposalStatus::Expired => {
                         println!("{:?} proposal expired", proposal.status)
