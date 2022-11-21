@@ -10,7 +10,7 @@ The contract has been deployed on Testnet to: https://explorer.testnet.near.org/
 
 # Summary
 
-![alt text](https://github.com/pmespresso/direct-revelation-dao/diagram.jpeg?raw=true)
+![alt text](./diagram.jpeg?raw=true)
 
 ## Inspiration
 
